@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sillcocks Guy Rule - High Tension</title>
+    <style>
+        :root { --red: #d62828; --navy: #003049; --cream: #fdf0d5; --gold: #fcbf49; }
+        body { font-family: system-ui, sans-serif; background: var(--cream); display: flex; justify-content: center; padding: 10px; }
+        .app-card { width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 3px solid var(--navy); }
+        h2 { text-align: center; color: var(--red); margin: 0 0 15px 0; text-transform: uppercase; font-size: 1.4rem; }
+        .toggle-container { display: flex; border: 2px solid var(--navy); border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
+        .toggle-btn { flex: 1; padding: 10px; border: none; background: #eee; cursor: pointer; font-weight: bold; font-size: 0.75rem; }
+        .toggle-btn.active { background: var(--navy); color: white; }
+        .step { margin-bottom: 12px; }
+        .row { display: flex; gap: 8px; }
+        label { display: block; font-size: 0.65rem; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 4px; }
+        select, input { width: 100%; padding: 10px; border-radius: 6px; border: 2px solid var(--navy); font-size: 1rem; font-weight: bold; background: white; box-sizing: border-box; }
+        .ratio-display { background: #f0f0f0; padding: 8px; border-radius: 6px; text-align: center; margin-bottom: 12px; border: 1px dashed var(--navy); }
+        .ratio-val { font-weight: 900; color: var(--red); font-size: 1.1rem; }
+        .window { margin-top: 15px; background: var(--navy); color: white; padding: 15px; border-radius: 12px; text-align: center; border: 4px solid var(--gold); }
+        .window-label { display: block; font-size: 0.8rem; font-weight: 900; color: var(--gold); margin-bottom: 2px; }
+        .window-result { font-size: 2.2rem; font-weight: 900; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="app-card">
+    <h2>Sillcocks Pro</h2>
+    <div class="toggle-container">
+        <button id="modeCorner" class="toggle-btn active" onclick="setMode('corner')">CORNER</button>
+        <button id="modeDead" class="toggle-btn" onclick="setMode('dead')">DEAD END</button>
+    </div>
+
+    <div class="step">
+        <label>Suspension Strand</label>
+        <select id="strand" onchange="calculate()">
+            <option value="6M">6M Window</option>
+            <option value="10M" selected>10M Window</option>
+            <option value="16M">16M Window</option>
+        </select>
+    </div>
+
+    <div class="step">
+        <div class="row">
+            <div style="flex:1"><label>Lead (ft)</label><input type="number" id="L" value="10" oninput="calculate()"></div>
+            <div style="flex:1"><label>Height (ft)</label><input type="number" id="H" value="40" oninput="calculate()"></div>
+        </div>
+    </div>
+
+    <div class="ratio-display">
+        <label>Calculated Ratio</label>
+        <span class="ratio-val" id="ratioOut">0.25</span>
+    </div>
+
+    <div class="step" id="pullBox">
+        <label>Pull on Pole (ft)</label>
+        <input type="number" id="P" value="30" oninput="calculate()">
+    </div>
+
+    <div class="window">
+        <span id="winLabel" class="window-label">10M Window</span>
+        <span id="winRes" class="window-result">--</span>
+    </div>
+</div>
+
+<script>
+    let mode = 'corner';
+    const data = {
+        "6M": {
+            1.00: {10:6, 20:6, 30:6, 40:10, 50:10},
+            0.80: {10:6, 20:6, 30:6, 40:10, 50:10},
+            0.66: {10:6, 20:6, 30:10, 40:10, 50:16},
+            0.50: {10:6, 20:6, 30:10, 40:16, 50:16},
+            0.40: {10:6, 20:10, 30:10, 40:16, 50:25},
+            0.33: {10:6, 20:10, 30:16, 40:16, 50:25},
+            0.25: {10:6, 20:10, 30:16, 40:20, 50:26}
+        },
+        "10M": {
+            1.00: {10:6, 20:6, 30:10, 40:16, 50:16},
+            0.80: {10:6, 20:10, 30:10, 40:16, 50:25},
+            0.66: {10:6, 20:10, 30:16, 40:16, 50:25},
+            0.50: {10:6, 20:10, 30:16, 40:25, 50:25},
+            0.40: {10:6, 20:16, 30:25, 40:25, 50:30},
+            0.33: {10:10, 20:16, 30:25, 40:26, 50:32},
+            0.25: {10:10, 20:20, 30:26, 40:36, 50:42}
+        },
+        "16M": {
+            1.00: {10:6, 20:10, 30:16, 40:20, 50:26},
+            0.80: {10:6, 20:12, 30:16, 40:22, 50:30},
+            0.66: {10:6, 20:12, 30:20, 40:26, 50:30},
+            0.50: {10:10, 20:16, 30:22, 40:30, 50:36},
+            0.40: {10:10, 20:20, 30:26, 40:36, 50:48},
+            0.33: {10:12, 20:22, 30:32, 40:42, 60:60},
+            0.25: {10:16, 20:30, 30:42, 40:60, 50:70}
+        }
+    };
+
+    function setMode(m) {
+        mode = m;
+        document.getElementById('modeCorner').classList.toggle('active', m === 'corner');
+        document.getElementById('modeDead').classList.toggle('active', m === 'dead');
+        document.getElementById('pullBox').style.display = (m === 'corner') ? 'block' : 'none';
+        calculate();
+    }
+
+    function calculate() {
+        const L = parseFloat(document.getElementById('L').value) || 0;
+        const H = parseFloat(document.getElementById('H').value) || 1;
+        const P = (mode === 'dead') ? 50 : (parseFloat(document.getElementById('P').value) || 0);
+        const strandStr = document.getElementById('strand').value;
+        const ratio = L / H;
+        document.getElementById('ratioOut').innerText = ratio.toFixed(2);
+        document.getElementById('winLabel').innerText = strandStr + " Window";
+
+        const ratios = [1.0, 0.8, 0.66, 0.5, 0.4, 0.33, 0.25];
+        const closestRatio = ratios.reduce((prev, curr) => Math.abs(curr - ratio) < Math.abs(prev - ratio) ? curr : prev);
+        
+        const row = data[strandStr][closestRatio];
+        const pulls = Object.keys(row).map(Number).sort((a,b)=>a-b);
+        let result = row[pulls[pulls.length-1]];
+
+        for (let i=0; i < pulls.length; i++) {
+            if (P <= pulls[i]) { result = row[pulls[i]]; break; }
+        }
+
+        document.getElementById('winRes').innerText = result + "M";
+    }
+    calculate();
+</script>
+</body>
+</html>
